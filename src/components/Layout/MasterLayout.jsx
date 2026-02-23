@@ -1,0 +1,51 @@
+import { useState, useEffect } from "react";
+import Sidebar from "./Sidebar";
+import Header from "./Header";
+import { motion, AnimatePresence } from "framer-motion";
+import { useLocation } from "react-router-dom";
+
+const MasterLayout = ({ children }) => {
+    const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth > 1024);
+    const location = useLocation();
+
+    // Close sidebar on route change (mobile only)
+    useEffect(() => {
+        if (window.innerWidth <= 1024) {
+            setIsSidebarOpen(false);
+        }
+    }, [location]);
+
+    return (
+        <div className="min-h-screen bg-neutral-50">
+            {/* Mobile Backdrop */}
+            <AnimatePresence>
+                {isSidebarOpen && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        onClick={() => setIsSidebarOpen(false)}
+                        className="fixed inset-0 bg-neutral-900/40 backdrop-blur-sm z-[55] lg:hidden"
+                    />
+                )}
+            </AnimatePresence>
+
+            <Sidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
+            <Header isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen} />
+
+            <main className={`transition-all duration-300 pt-[70px] min-h-screen ${isSidebarOpen ? 'lg:pl-64' : 'lg:pl-0'}`}>
+                {/* Note: keeping pl-64 for desktop as default for now, can be toggled if needed */}
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.98 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.4 }}
+                    className="p-4 md:p-8"
+                >
+                    {children}
+                </motion.div>
+            </main>
+        </div>
+    );
+};
+
+export default MasterLayout;
