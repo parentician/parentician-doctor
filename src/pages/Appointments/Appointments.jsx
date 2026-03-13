@@ -1,8 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import MasterLayout from "../../components/Layout/MasterLayout";
 import { Icon } from "@iconify/react";
 import Modal from "../../components/Common/Modal";
 import toast from "react-hot-toast";
+import { get, put, post } from "../../helper/api_helper";
+
+const IMG_URL = (import.meta.env.VITE_APP_AUTHDOMAIN || "http://localhost:5000") + "/api";
 
 const Appointments = () => {
     const [activeTab, setActiveTab] = useState("TODAY");
@@ -10,7 +13,14 @@ const Appointments = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [modalType, setModalType] = useState("VIEW"); // 'VIEW' or 'EDIT'
     const [selectedAppt, setSelectedAppt] = useState(null);
-    const [editData, setEditData] = useState({ status: "", notes: "" });
+    const [editData, setEditData] = useState({ status: "", internalNotes: "", cancelReason: "" });
+    const [appointments, setAppointments] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [isFollowUpOpen, setIsFollowUpOpen] = useState(false);
+    const [followUpStep, setFollowUpStep] = useState("CONFIRM"); // "CONFIRM" or "FORM"
+    const [followUpData, setFollowUpData] = useState({ date: "", reason: "" });
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 10;
 
     const tabs = [
         { id: "TODAY", label: "Today" },
@@ -20,23 +30,59 @@ const Appointments = () => {
         { id: "ALL", label: "All" },
     ];
 
-    const dummyData = [
-        { id: 1, date: "Feb 21, 2026", slot: "10:30 AM", fullName: "Riya Sharma", concern: "Child Nutrition consultation regarding picky eating habits", grandTotal: "₹1,200", status: "CONFIRMED" },
-        { id: 2, date: "Feb 21, 2026", slot: "11:15 AM", fullName: "Arjun Mehra", concern: "Growth Milestone checkup for 18-month-old", grandTotal: "₹800", status: "PENDING" },
-        { id: 3, date: "Feb 22, 2026", slot: "09:00 AM", fullName: "Sanya Gupta", concern: "Sleep Training session", grandTotal: "₹1,500", status: "CONFIRMED" },
-        { id: 4, date: "Feb 20, 2026", slot: "04:30 PM", fullName: "Vikram Singh", concern: "Behavioral Issues in toddlers", grandTotal: "₹1,200", status: "COMPLETED" },
-        { id: 5, date: "Feb 19, 2026", slot: "12:00 PM", fullName: "Priya Das", concern: "Speech delay concerns", grandTotal: "₹800", status: "CANCELLED" },
-    ];
+    useEffect(() => {
+        fetchAppointments();
+    }, []);
 
-    const filteredData = dummyData.filter(appt => {
-        const matchesSearch = appt.fullName.toLowerCase().includes(searchQuery.toLowerCase());
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [activeTab, searchQuery]);
+
+    const fetchAppointments = async () => {
+        setLoading(true);
+        try {
+            const response = await get("/api/doctor-portal/appointments");
+            if (response.status) {
+                setAppointments(response.data);
+            } else {
+                toast.error(response.message || "Failed to fetch appointments");
+            }
+        } catch (error) {
+            toast.error("Error fetching appointments");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const parseDate = (dateStr) => {
+        if (!dateStr) return new Date(0);
+        const [day, month, year] = dateStr.split('/').map(Number);
+        return new Date(year, month - 1, day);
+    };
+
+    const filteredData = appointments.filter(appt => {
+        const matchesSearch = appt.fullName?.toLowerCase().includes(searchQuery.toLowerCase());
+
+        const apptDateObj = parseDate(appt.date);
+        const todayObj = new Date();
+        todayObj.setHours(0, 0, 0, 0);
+
+        const isToday = apptDateObj.getTime() === todayObj.getTime();
+        const isFuture = apptDateObj.getTime() > todayObj.getTime();
+        const isPast = apptDateObj.getTime() < todayObj.getTime();
+
         if (activeTab === "ALL") return matchesSearch;
-        if (activeTab === "TODAY") return matchesSearch && appt.date === "Feb 21, 2026";
-        if (activeTab === "UPCOMING") return matchesSearch && appt.status === "CONFIRMED" && appt.date !== "Feb 21, 2026";
-        if (activeTab === "PAST") return matchesSearch && appt.status === "COMPLETED";
+        if (activeTab === "TODAY") return matchesSearch && isToday;
+        if (activeTab === "UPCOMING") return matchesSearch && (appt.status === "CONFIRMED" || appt.status === "PENDING") && isFuture;
+        if (activeTab === "PAST") return matchesSearch && (appt.status === "COMPLETED" || isPast);
         if (activeTab === "CANCELLED") return matchesSearch && appt.status === "CANCELLED";
         return matchesSearch;
     });
+
+    const totalPages = Math.ceil(filteredData.length / itemsPerPage);
+    const indexOfLastItem = currentPage * itemsPerPage;
+    const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+    const currentItems = filteredData.slice(indexOfFirstItem, indexOfLastItem);
 
     const getStatusStyle = (status) => {
         switch (status) {
@@ -56,15 +102,70 @@ const Appointments = () => {
 
     const handleEdit = (appt) => {
         setSelectedAppt(appt);
-        setEditData({ status: appt.status, notes: appt.notes || "" });
+        setEditData({
+            status: appt.status,
+            internalNotes: appt.internalNotes || "",
+            cancelReason: appt.reason || ""
+        });
         setModalType("EDIT");
         setIsModalOpen(true);
     };
 
-    const handleUpdate = () => {
-        // Mock update
-        toast.success("Appointment updated successfully!");
-        setIsModalOpen(false);
+    const handleUpdate = async () => {
+        // Validation: If confirmed -> cancelled, reason is required
+        if (selectedAppt.status === "CONFIRMED" && editData.status === "CANCELLED" && !editData.cancelReason?.trim()) {
+            return toast.error("Please provide a cancellation reason");
+        }
+
+        try {
+            const response = await put("/api/doctor-portal/edit-appointment", {
+                appointmentId: selectedAppt.id,
+                status: editData.status,
+                internalNotes: editData.internalNotes,
+                cancelReason: editData.cancelReason
+            });
+
+            if (response.status) {
+                toast.success(response.message || "Appointment updated successfully!");
+                setIsModalOpen(false);
+                fetchAppointments(); // Refresh list
+            } else {
+                toast.error(response.message || "Failed to update appointment");
+            }
+        } catch (error) {
+            toast.error("Error updating appointment");
+            console.error(error);
+        }
+    };
+    const handleFollowUpClick = (appt) => {
+        setSelectedAppt(appt);
+        setFollowUpStep("CONFIRM");
+        setFollowUpData({ date: "", reason: "" });
+        setIsFollowUpOpen(true);
+    };
+
+    const handleFollowUpSubmit = async () => {
+        if (!followUpData.date || !followUpData.reason) {
+            return toast.error("Please fill in all fields");
+        }
+
+        try {
+            const response = await post("/api/doctor-portal/schedule-follow-up", {
+                appointmentId: selectedAppt.id,
+                date: followUpData.date,
+                reason: followUpData.reason
+            });
+
+            if (response.status) {
+                toast.success(response.message || "Follow-up scheduled successfully!");
+                setIsFollowUpOpen(false);
+            } else {
+                toast.error(response.message || "Failed to schedule follow-up");
+            }
+        } catch (error) {
+            toast.error("Error scheduling follow-up");
+            console.error(error);
+        }
     };
 
     return (
@@ -83,10 +184,7 @@ const Appointments = () => {
                                 onChange={(e) => setSearchQuery(e.target.value)}
                             />
                         </div>
-                        <button className="flex items-center gap-2 px-4 py-2 bg-white border border-neutral-200 rounded-xl hover:bg-neutral-50 transition-colors">
-                            <Icon icon="solar:filter-bold" className="text-brand" />
-                            <span className="text-sm font-semibold">Filter</span>
-                        </button>
+
                     </div>
                 </div>
 
@@ -117,13 +215,13 @@ const Appointments = () => {
                                     <th className="px-6 py-4 font-bold">Date & Slot</th>
                                     <th className="px-6 py-4 font-bold">Patient Name</th>
                                     <th className="px-6 py-4 font-bold">Concern</th>
-                                    <th className="px-6 py-4 font-bold">Amount</th>
+                                    <th className="px-6 py-4 font-bold">Doctor Fees</th>
                                     <th className="px-6 py-4 font-bold">Status</th>
                                     <th className="px-6 py-4 font-bold text-right">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-neutral-100">
-                                {filteredData.map((appt) => (
+                                {currentItems.map((appt) => (
                                     <tr key={appt.id} className="hover:bg-neutral-50 transition-colors group">
                                         <td className="px-6 py-4 text-sm font-medium text-neutral-400">#{appt.id}</td>
                                         <td className="px-6 py-4">
@@ -142,7 +240,7 @@ const Appointments = () => {
                                             <p className="text-sm text-neutral-600 truncate">{appt.concern}</p>
                                         </td>
                                         <td className="px-6 py-4">
-                                            <p className="text-sm font-bold text-neutral-800">{appt.grandTotal}</p>
+                                            <p className="text-sm font-bold text-neutral-800">₹{appt.doctor_charges || appt.grandTotal}</p>
                                         </td>
                                         <td className="px-6 py-4">
                                             <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${getStatusStyle(appt.status)}`}>
@@ -150,7 +248,7 @@ const Appointments = () => {
                                             </span>
                                         </td>
                                         <td className="px-6 py-4 text-right">
-                                            <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <div className="flex items-center justify-end gap-2">
                                                 <button
                                                     onClick={() => handleView(appt)}
                                                     className="p-2 hover:bg-white rounded-lg border border-transparent hover:border-neutral-200 transition-all text-neutral-400 hover:text-brand"
@@ -165,6 +263,13 @@ const Appointments = () => {
                                                 >
                                                     <Icon icon="solar:pen-new-square-bold" />
                                                 </button>
+                                                <button
+                                                    onClick={() => handleFollowUpClick(appt)}
+                                                    className="p-2 hover:bg-white rounded-lg border border-transparent hover:border-neutral-200 transition-all text-neutral-400 hover:text-amber-500"
+                                                    title="Schedule Follow-up"
+                                                >
+                                                    <Icon icon="solar:calendar-add-bold" />
+                                                </button>
                                             </div>
                                         </td>
                                     </tr>
@@ -172,6 +277,49 @@ const Appointments = () => {
                             </tbody>
                         </table>
                     </div>
+
+                    {filteredData.length > 0 && (
+                        <div className="px-6 py-4 bg-white border-t border-neutral-100 flex items-center justify-between">
+                            <div className="text-sm text-neutral-500">
+                                Showing <span className="font-bold text-neutral-800">{indexOfFirstItem + 1}</span> to <span className="font-bold text-neutral-800">{Math.min(indexOfLastItem, filteredData.length)}</span> of <span className="font-bold text-neutral-800">{filteredData.length}</span> appointments
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                                    disabled={currentPage === 1}
+                                    className="p-2 border border-neutral-200 rounded-lg hover:bg-neutral-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    <Icon icon="solar:alt-arrow-left-linear" />
+                                </button>
+                                {[...Array(totalPages)].map((_, i) => {
+                                    const page = i + 1;
+                                    // Logic to show early, mid, late pages if many exist
+                                    if (totalPages <= 7 || (page === 1 || page === totalPages) || (page >= currentPage - 1 && page <= currentPage + 1)) {
+                                        return (
+                                            <button
+                                                key={page}
+                                                onClick={() => setCurrentPage(page)}
+                                                className={`w-8 h-8 rounded-lg text-sm font-bold transition-all ${currentPage === page ? "bg-brand text-white shadow-lg shadow-brand/20" : "text-neutral-500 hover:bg-neutral-50 border border-transparent"
+                                                    }`}
+                                            >
+                                                {page}
+                                            </button>
+                                        );
+                                    } else if (page === currentPage - 2 || page === currentPage + 2) {
+                                        return <span key={page} className="text-neutral-400">...</span>;
+                                    }
+                                    return null;
+                                })}
+                                <button
+                                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                                    disabled={currentPage === totalPages}
+                                    className="p-2 border border-neutral-200 rounded-lg hover:bg-neutral-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    <Icon icon="solar:alt-arrow-right-linear" />
+                                </button>
+                            </div>
+                        </div>
+                    )}
 
                     {filteredData.length === 0 && (
                         <div className="p-12 text-center h-[400px] flex flex-col items-center justify-center">
@@ -234,9 +382,23 @@ const Appointments = () => {
                                     <p className="font-bold text-neutral-700">{selectedAppt.slot}</p>
                                 </div>
                                 <div className="space-y-1">
-                                    <p className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">AMOUNT</p>
-                                    <p className="font-bold text-neutral-800">{selectedAppt.grandTotal}</p>
+                                    <p className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">Doctor Fees</p>
+                                    <p className="font-bold text-neutral-800">₹{selectedAppt.doctor_charges || selectedAppt.grandTotal}</p>
                                 </div>
+                                {selectedAppt.report && (
+                                    <div className="space-y-1">
+                                        <p className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">Medical Report</p>
+                                        <a 
+                                            href={`${IMG_URL}/get-images/${selectedAppt.report}`} 
+                                            target="_blank" 
+                                            rel="noopener noreferrer"
+                                            className="text-sm font-bold text-[#E66F51] hover:underline flex items-center gap-1"
+                                        >
+                                            View Report
+                                            <Icon icon="solar:link-bold" fontSize={14} />
+                                        </a>
+                                    </div>
+                                )}
                                 <div className="space-y-1">
                                     <p className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">STATUS</p>
                                     <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${getStatusStyle(selectedAppt.status)}`}>
@@ -249,33 +411,150 @@ const Appointments = () => {
                                         {selectedAppt.concern}
                                     </p>
                                 </div>
+                                {selectedAppt.internalNotes && (
+                                    <div className="col-span-2 space-y-1">
+                                        <p className="text-[10px] font-black text-neutral-400 uppercase tracking-widest flex items-center gap-2">DOCTOR'S PERSONAL NOTE <span className="text-[8px] px-1.5 py-0.5 bg-neutral-100 text-neutral-500 rounded-full lowercase font-bold italic tracking-normal">Only visible to you</span></p>
+                                        <p className="text-sm text-neutral-600 leading-relaxed bg-amber-50/50 p-4 rounded-xl border border-amber-100 italic">
+                                            {selectedAppt.internalNotes}
+                                        </p>
+                                    </div>
+                                )}
                             </div>
                         ) : (
                             <div className="space-y-6">
                                 <div>
                                     <label className="block text-[10px] font-black text-neutral-400 uppercase tracking-widest mb-2">UPDATE STATUS</label>
-                                    <div className="grid grid-cols-2 gap-3">
-                                        {["PENDING", "CONFIRMED", "COMPLETED", "CANCELLED"].map(status => (
-                                            <button
-                                                key={status}
-                                                onClick={() => setEditData({ ...editData, status })}
-                                                className={`px-4 py-2 rounded-xl text-xs font-bold border transition-all ${editData.status === status
-                                                    ? 'bg-brand border-brand text-white shadow-lg shadow-brand/20'
-                                                    : 'bg-white border-neutral-200 text-neutral-500 hover:border-brand-light'
-                                                    }`}
-                                            >
-                                                {status}
-                                            </button>
-                                        ))}
-                                    </div>
+                                    <select
+                                        className="input-field py-3 font-bold"
+                                        value={editData.status}
+                                        onChange={(e) => setEditData({ ...editData, status: e.target.value })}
+                                        disabled={selectedAppt.status === "CANCELLED" || selectedAppt.status === "COMPLETED"}
+                                    >
+                                        {selectedAppt.status === "PENDING" && (
+                                            <>
+                                                <option value="PENDING">PENDING</option>
+                                                <option value="CONFIRMED">CONFIRMED</option>
+                                                <option value="CANCELLED">CANCELLED</option>
+                                            </>
+                                        )}
+                                        {selectedAppt.status === "CONFIRMED" && (
+                                            <>
+                                                <option value="CONFIRMED">CONFIRMED</option>
+                                                <option value="COMPLETED">COMPLETED</option>
+                                                <option value="CANCELLED">CANCELLED</option>
+                                            </>
+                                        )}
+                                        {selectedAppt.status === "CANCELLED" && (
+                                            <option value="CANCELLED">CANCELLED</option>
+                                        )}
+                                        {selectedAppt.status === "COMPLETED" && (
+                                            <option value="COMPLETED">COMPLETED</option>
+                                        )}
+                                    </select>
                                 </div>
+
+                                {editData.status === "CANCELLED" && selectedAppt.status === "CONFIRMED" && (
+                                    <div className="animate-in fade-in slide-in-from-top-2 duration-300">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <label className="block text-[10px] font-black text-neutral-400 uppercase tracking-widest flex items-center gap-2">
+                                                CANCELLATION REASON
+                                                <span className="text-red-500 text-xs">* Required</span>
+                                            </label>
+                                            <button
+                                                type="button"
+                                                onClick={() => setEditData({ ...editData, cancelReason: "Emergency Cancellation" })}
+                                                className="text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200 hover:bg-amber-100 transition-colors"
+                                            >
+                                                Emergency Cancel
+                                            </button>
+                                        </div>
+                                        <textarea
+                                            className="input-field min-h-[100px] resize-none"
+                                            placeholder="Why is this appointment being cancelled?"
+                                            value={editData.cancelReason}
+                                            onChange={(e) => setEditData({ ...editData, cancelReason: e.target.value })}
+                                        />
+                                    </div>
+                                )}
+
                                 <div>
-                                    <label className="block text-[10px] font-black text-neutral-400 uppercase tracking-widest mb-2">INTERNAL NOTES</label>
+                                    <label className="block text-[10px] font-black text-neutral-400 uppercase tracking-widest mb-2 flex items-center gap-2">DOCTOR'S PERSONAL NOTE <span className="text-[8px] px-1.5 py-0.5 bg-amber-50 text-amber-600 border border-amber-100 rounded-full lowercase font-bold italic tracking-normal">Only visible to you</span></label>
                                     <textarea
                                         className="input-field min-h-[120px] resize-none"
-                                        placeholder="Add private notes for this session..."
-                                        value={editData.notes}
-                                        onChange={(e) => setEditData({ ...editData, notes: e.target.value })}
+                                        placeholder="Add private notes for your reference only..."
+                                        value={editData.internalNotes}
+                                        onChange={(e) => setEditData({ ...editData, internalNotes: e.target.value })}
+                                    />
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
+            </Modal>
+
+            {/* Follow-up Modal */}
+            <Modal
+                isOpen={isFollowUpOpen}
+                onClose={() => setIsFollowUpOpen(false)}
+                title={followUpStep === "CONFIRM" ? "Schedule Follow-up" : "Follow-up Details"}
+                maxWidth="max-w-md"
+                footer={
+                    <div className="flex justify-end gap-3">
+                        <button
+                            onClick={() => setIsFollowUpOpen(false)}
+                            className="px-6 py-2 rounded-xl font-bold text-neutral-500 hover:bg-neutral-100 transition-all"
+                        >
+                            Cancel
+                        </button>
+                        {followUpStep === "CONFIRM" ? (
+                            <button
+                                onClick={() => setFollowUpStep("FORM")}
+                                className="btn-primary px-8"
+                            >
+                                Yes, Schedule
+                            </button>
+                        ) : (
+                            <button
+                                onClick={handleFollowUpSubmit}
+                                className="btn-primary px-8"
+                            >
+                                Confirm Follow-up
+                            </button>
+                        )}
+                    </div>
+                }
+            >
+                {selectedAppt && (
+                    <div className="space-y-6">
+                        {followUpStep === "CONFIRM" ? (
+                            <div className="text-center py-4">
+                                <div className="w-16 h-16 bg-amber-50 text-amber-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                                    <Icon icon="solar:calendar-add-bold" className="text-3xl" />
+                                </div>
+                                <h4 className="text-xl font-bold text-neutral-800">Confirm Follow-up?</h4>
+                                <p className="text-neutral-500 mt-2">
+                                    Do you want to schedule a follow-up session for <strong>{selectedAppt.fullName}</strong>?
+                                </p>
+                            </div>
+                        ) : (
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-[10px] font-black text-neutral-400 uppercase tracking-widest mb-2">TARGET FOLLOW-UP DATE</label>
+                                    <input
+                                        type="date"
+                                        className="input-field py-3"
+                                        value={followUpData.date}
+                                        onChange={(e) => setFollowUpData({ ...followUpData, date: e.target.value })}
+                                        min={new Date().toISOString().split('T')[0]}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-[10px] font-black text-neutral-400 uppercase tracking-widest mb-2">FOLLOW-UP REASON / GOAL</label>
+                                    <textarea
+                                        className="input-field min-h-[100px] resize-none"
+                                        placeholder="What is the objective for the next session?"
+                                        value={followUpData.reason}
+                                        onChange={(e) => setFollowUpData({ ...followUpData, reason: e.target.value })}
                                     />
                                 </div>
                             </div>

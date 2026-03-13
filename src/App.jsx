@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useSearchParams } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import Login from "./pages/Login/Login";
 import Dashboard from "./pages/Dashboard/Dashboard";
@@ -9,6 +9,8 @@ import Earnings from "./pages/Earnings/Earnings";
 import Patients from "./pages/Patients/Patients";
 import Settings from "./pages/Settings/Settings";
 import Notifications from "./pages/Notifications/Notifications";
+import ResetPassword from "./pages/ResetPassword/ResetPassword";
+import ConnectCalendar from "./pages/ConnectCalendar/ConnectCalendar";
 import "./index.css";
 
 const ProtectedRoute = ({ children }) => {
@@ -19,58 +21,98 @@ const ProtectedRoute = ({ children }) => {
   return children;
 };
 
+const CalendarRoute = ({ children }) => {
+  const [searchParams] = useSearchParams();
+  const doctorData = JSON.parse(localStorage.getItem("doctorData") || "{}");
+
+  // Check if we just returned from successful connection
+  const justConnected = searchParams.get("calendarConnected") === "true";
+
+  if (justConnected && !doctorData.isCalendarConnected) {
+    doctorData.isCalendarConnected = true;
+    localStorage.setItem("doctorData", JSON.stringify(doctorData));
+  }
+
+  if (!doctorData.isCalendarConnected && !justConnected) {
+    return <Navigate to="/connect-calendar" replace />;
+  }
+  return children;
+};
+
 function App() {
   return (
     <BrowserRouter>
       <Toaster position="top-right" />
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/reset-password/:token" element={<ResetPassword />} />
+        <Route path="/connect-calendar" element={
+          <ProtectedRoute>
+            <ConnectCalendar />
+          </ProtectedRoute>
+        } />
 
         <Route path="/dashboard" element={
           <ProtectedRoute>
-            <Dashboard />
+            <CalendarRoute>
+              <Dashboard />
+            </CalendarRoute>
           </ProtectedRoute>
         } />
 
         <Route path="/appointments" element={
           <ProtectedRoute>
-            <Appointments />
+            <CalendarRoute>
+              <Appointments />
+            </CalendarRoute>
           </ProtectedRoute>
         } />
 
         <Route path="/profile" element={
           <ProtectedRoute>
-            <Profile />
+            <CalendarRoute>
+              <Profile />
+            </CalendarRoute>
           </ProtectedRoute>
         } />
 
         <Route path="/availability" element={
           <ProtectedRoute>
-            <Availability />
+            <CalendarRoute>
+              <Availability />
+            </CalendarRoute>
           </ProtectedRoute>
         } />
 
         <Route path="/earnings" element={
           <ProtectedRoute>
-            <Earnings />
+            <CalendarRoute>
+              <Earnings />
+            </CalendarRoute>
           </ProtectedRoute>
         } />
 
         <Route path="/patients" element={
           <ProtectedRoute>
-            <Patients />
+            <CalendarRoute>
+              <Patients />
+            </CalendarRoute>
           </ProtectedRoute>
         } />
 
         <Route path="/settings" element={
           <ProtectedRoute>
-            <Settings />
+            <CalendarRoute>
+              <Settings />
+            </CalendarRoute>
           </ProtectedRoute>
         } />
 
         <Route path="/notifications" element={
           <ProtectedRoute>
-            <Notifications />
+            <CalendarRoute>
+              <Notifications />
+            </CalendarRoute>
           </ProtectedRoute>
         } />
 

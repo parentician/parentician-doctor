@@ -1,13 +1,50 @@
 import MasterLayout from "../../components/Layout/MasterLayout";
 import { Icon } from "@iconify/react";
 import ReactApexChart from "react-apexcharts";
+import { useEffect, useState } from "react";
+import { get } from "../../helper/api_helper";
+import toast from "react-hot-toast";
 
 const Dashboard = () => {
+    const [data, setData] = useState(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        fetchDashboardData();
+    }, []);
+
+    const fetchDashboardData = async () => {
+        setLoading(true);
+        try {
+            const response = await get("/api/doctor-portal/dashboard-stats");
+            if (response.status) {
+                setData(response.data);
+            }
+        } catch (error) {
+            toast.error("Error fetching dashboard data");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    if (loading || !data) {
+        return (
+            <MasterLayout>
+                <div className="min-h-[60vh] flex flex-col items-center justify-center gap-4">
+                    <div className="w-12 h-12 border-4 border-brand border-t-transparent rounded-full animate-spin"></div>
+                    <p className="text-neutral-500 font-medium">Loading your dashboard...</p>
+                </div>
+            </MasterLayout>
+        );
+    }
+
+    const { stats: apiStats, chartData, todayAppointments, pendingAppointments } = data;
+
     const stats = [
-        { title: "Today's Sessions", value: "8", icon: "solar:videocamera-record-bold", color: "text-blue-500", bg: "bg-blue-50" },
-        { title: "Pending Approvals", value: "12", icon: "solar:clock-circle-bold", color: "text-amber-500", bg: "bg-amber-50" },
-        { title: "Total Patients", value: "1,248", icon: "solar:users-group-rounded-bold", color: "text-brand", bg: "bg-brand-light" },
-        { title: "This Month Earnings", value: "₹45,200", icon: "solar:wallet-money-bold", color: "text-green-500", bg: "bg-green-50" },
+        { title: "Today's Sessions", value: apiStats.todaySessions.toString(), icon: "solar:videocamera-record-bold", color: "text-blue-500", bg: "bg-blue-50" },
+        { title: "Pending Approvals", value: apiStats.pendingApprovals.toString(), icon: "solar:clock-circle-bold", color: "text-amber-500", bg: "bg-amber-50" },
+        { title: "Total Patients", value: apiStats.totalPatients.toString(), icon: "solar:users-group-rounded-bold", color: "text-brand", bg: "bg-brand-light" },
+        { title: "This Month Earnings", value: `₹${apiStats.thisMonthEarnings.toLocaleString()}`, icon: "solar:wallet-money-bold", color: "text-green-500", bg: "bg-green-50" },
     ];
 
     const chartOptions = {
@@ -25,13 +62,13 @@ const Dashboard = () => {
         dataLabels: { enabled: false },
         colors: ['#E66F51'],
         xaxis: {
-            categories: ['Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb'],
+            categories: chartData.map(d => d.month),
             axisBorder: { show: false },
             axisTicks: { show: false },
         },
         yaxis: {
             labels: {
-                formatter: (val) => `₹${val / 1000}k`
+                formatter: (val) => `₹${val >= 1000 ? (val / 1000).toFixed(1) + 'k' : val}`
             }
         },
         grid: {
@@ -42,15 +79,11 @@ const Dashboard = () => {
 
     const chartSeries = [{
         name: 'Earnings',
-        data: [32000, 41000, 38000, 52000, 48000, 45200]
+        data: chartData.map(d => d.earnings)
     }];
 
-    const appointments = [
-        { id: 1, patient: "Riya Sharma", time: "10:30 AM", concern: "Child Nutrition", status: "Confirmed" },
-        { id: 2, patient: "Arjun Mehra", time: "11:15 AM", concern: "Growth Milestone", status: "Pending" },
-        { id: 3, patient: "Sanya Gupta", time: "12:00 PM", concern: "Sleep Training", status: "Confirmed" },
-        { id: 4, patient: "Vikram Singh", time: "02:30 PM", concern: "Behavioral Issues", status: "Confirmed" },
-    ];
+    const currentYear = new Date().getFullYear();
+    const currentMonthName = new Intl.DateTimeFormat('en-US', { month: 'short' }).format(new Date());
 
     return (
         <MasterLayout>
@@ -76,7 +109,7 @@ const Dashboard = () => {
                     <div className="lg:col-span-2 card-container">
                         <div className="p-6 border-b border-neutral-100 flex items-center justify-between">
                             <h3 className="font-bold text-lg">Today's Appointments</h3>
-                            <button className="text-brand text-sm font-semibold hover:underline">View All</button>
+
                         </div>
                         <div className="overflow-x-auto">
                             <table className="w-full text-left">
@@ -86,28 +119,33 @@ const Dashboard = () => {
                                         <th className="px-6 py-4 font-semibold">Time Slot</th>
                                         <th className="px-6 py-4 font-semibold">Concern</th>
                                         <th className="px-6 py-4 font-semibold">Status</th>
-                                        <th className="px-6 py-4 font-semibold text-right">Action</th>
+
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-neutral-100">
-                                    {appointments.map((appt) => (
+                                    {todayAppointments.length > 0 ? todayAppointments.map((appt) => (
                                         <tr key={appt.id} className="hover:bg-neutral-50 transition-colors">
-                                            <td className="px-6 py-4 font-medium text-neutral-800">{appt.patient}</td>
-                                            <td className="px-6 py-4 text-neutral-600">{appt.time}</td>
+                                            <td className="px-6 py-4 font-medium text-neutral-800">{appt.fullName}</td>
+                                            <td className="px-6 py-4 text-neutral-600">{appt.slot}</td>
                                             <td className="px-6 py-4 text-neutral-600">{appt.concern}</td>
                                             <td className="px-6 py-4">
-                                                <span className={`px-3 py-1 rounded-full text-xs font-bold ${appt.status === 'Confirmed' ? 'bg-green-100 text-green-600' : 'bg-amber-100 text-amber-600'
+                                                <span className={`px-3 py-1 rounded-full text-xs font-bold ${appt.status === 'CONFIRMED' ? 'bg-green-100 text-green-600' :
+                                                    appt.status === 'PENDING' ? 'bg-amber-100 text-amber-600' :
+                                                        appt.status === 'COMPLETED' ? 'bg-blue-100 text-blue-600' :
+                                                            'bg-neutral-100 text-neutral-600'
                                                     }`}>
                                                     {appt.status}
                                                 </span>
                                             </td>
-                                            <td className="px-6 py-4 text-right">
-                                                <button className="p-2 hover:bg-white rounded-lg border border-transparent hover:border-neutral-200 transition-all">
-                                                    <Icon icon="solar:eye-bold" className="text-neutral-400 hover:text-brand" />
-                                                </button>
+
+                                        </tr>
+                                    )) : (
+                                        <tr>
+                                            <td colSpan="5" className="px-6 py-8 text-center text-neutral-400 text-sm">
+                                                No sessions scheduled for today
                                             </td>
                                         </tr>
-                                    ))}
+                                    )}
                                 </tbody>
                             </table>
                         </div>
@@ -130,9 +168,51 @@ const Dashboard = () => {
                         <div className="mt-6 p-4 bg-brand-light rounded-xl border border-brand/10">
                             <div className="flex items-center justify-between">
                                 <p className="text-xs font-semibold text-brand">Projected Earnings</p>
-                                <span className="text-xs text-neutral-500 font-medium">Feb 2026</span>
+                                <span className="text-xs text-neutral-500 font-medium">{currentMonthName} {currentYear}</span>
                             </div>
-                            <h4 className="text-lg font-bold text-neutral-800 mt-1">₹58,400</h4>
+                            <h4 className="text-lg font-bold text-neutral-800 mt-1">₹{apiStats.thisMonthEarnings.toLocaleString()}</h4>
+                        </div>
+                    </div>
+
+                    {/* Pending Appointments */}
+                    <div className="lg:col-span-2 card-container">
+                        <div className="p-6 border-b border-neutral-100 flex items-center justify-between">
+                            <h3 className="font-bold text-lg">Pending Appointments</h3>
+
+                        </div>
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left">
+                                <thead>
+                                    <tr className="bg-neutral-50 text-neutral-500 text-sm">
+                                        <th className="px-6 py-4 font-semibold">Patient Name</th>
+                                        <th className="px-6 py-4 font-semibold">Time Slot</th>
+                                        <th className="px-6 py-4 font-semibold">Concern</th>
+                                        <th className="px-6 py-4 font-semibold">Status</th>
+
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-neutral-100">
+                                    {pendingAppointments.length > 0 ? pendingAppointments.map((appt) => (
+                                        <tr key={appt.id} className="hover:bg-neutral-50 transition-colors">
+                                            <td className="px-6 py-4 font-medium text-neutral-800">{appt.fullName}</td>
+                                            <td className="px-6 py-4 text-neutral-600">{appt.slot}</td>
+                                            <td className="px-6 py-4 text-neutral-600">{appt.concern}</td>
+                                            <td className="px-6 py-4">
+                                                <span className={`px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-600`}>
+                                                    {appt.status}
+                                                </span>
+                                            </td>
+
+                                        </tr>
+                                    )) : (
+                                        <tr>
+                                            <td colSpan="5" className="px-6 py-8 text-center text-neutral-400 text-sm">
+                                                No pending appointments
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>

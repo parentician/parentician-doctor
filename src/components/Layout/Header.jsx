@@ -23,12 +23,7 @@ const Header = ({ isSidebarOpen, setIsSidebarOpen }) => {
             </div>
 
             <div className="flex items-center gap-6">
-                <Link to="/notifications" className="relative group p-2 hover:bg-neutral-50 rounded-full cursor-pointer transition-colors duration-200">
-                    <Icon icon="solar:bell-bold" className="text-2xl text-neutral-500" />
-                    <span className="absolute top-1.5 right-1.5 w-4 h-4 bg-brand border-2 border-white rounded-full text-[10px] text-white flex items-center justify-center font-bold">
-                        3
-                    </span>
-                </Link>
+
 
                 <div className="flex items-center gap-3 group relative cursor-pointer">
                     <div className="text-right hidden sm:block">

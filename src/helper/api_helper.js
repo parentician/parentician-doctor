@@ -1,16 +1,19 @@
 import axios from "axios";
 
 // Apply base URL for axios using Vite env
-const API_URL = import.meta.env.VITE_APP_AUTHDOMAIN || "http://localhost:5000";
+const API_URL = import.meta.env.VITE_APP_AUTHDOMAIN || "http://192.168.1.142:5000";
 
 function getAccessToken() {
     const token = localStorage.getItem("doctorToken");
     return token ? `Bearer ${token}` : "";
 }
 
-function logoutAndRedirect() {
+function logoutAndRedirect(message = "") {
     localStorage.removeItem("doctorToken");
     localStorage.removeItem("doctorData");
+    if (message) {
+        localStorage.setItem("logoutMessage", message);
+    }
     if (window.location.pathname !== "/login") {
         window.location.href = "/login";
     }
@@ -24,7 +27,8 @@ axiosApi.interceptors.response.use(
     (response) => response,
     (error) => {
         if (error.response && error.response.status === 401) {
-            logoutAndRedirect();
+            const msg = error.response.data?.message || "Session expired";
+            logoutAndRedirect(msg);
         }
         return Promise.reject(error);
     }
