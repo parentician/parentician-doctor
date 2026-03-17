@@ -11,8 +11,9 @@ const ConnectCalendar = () => {
             toast.error("Doctor session not found. Please log in again.");
             return;
         }
+        const apiBaseUrl = import.meta.env.VITE_APP_AUTHDOMAIN;
         // Redirect to backend OAuth initiation
-        window.location.href = `http://localhost:5000/api/auth/google/connect/${doctorId}`;
+        window.location.href = `${apiBaseUrl}/api/auth/google/connect/${doctorId}`;
     };
 
     return (

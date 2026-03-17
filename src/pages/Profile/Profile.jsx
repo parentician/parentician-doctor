@@ -123,7 +123,7 @@ const Profile = () => {
         }
     };
 
-    const IMAGE_BASE_URL = `${import.meta.env.VITE_APP_AUTHDOMAIN || "http://localhost:5000"}/api/get-images/`;
+    const IMAGE_BASE_URL = `${import.meta.env.VITE_APP_AUTHDOMAIN}/api/get-images/`;
 
     if (!doctorData) {
         return <div className="p-10 text-center text-neutral-500">Loading your professional profile...</div>;

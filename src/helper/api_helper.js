@@ -1,7 +1,7 @@
 import axios from "axios";
 
 // Apply base URL for axios using Vite env
-const API_URL = import.meta.env.VITE_APP_AUTHDOMAIN || "http://192.168.1.142:5000";
+const API_URL = import.meta.env.VITE_APP_AUTHDOMAIN;
 
 function getAccessToken() {
     const token = localStorage.getItem("doctorToken");

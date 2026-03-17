@@ -5,7 +5,7 @@ import Modal from "../../components/Common/Modal";
 import toast from "react-hot-toast";
 import { get, put, post } from "../../helper/api_helper";
 
-const IMG_URL = (import.meta.env.VITE_APP_AUTHDOMAIN || "http://localhost:5000") + "/api";
+const IMG_URL = (import.meta.env.VITE_APP_AUTHDOMAIN) + "/api";
 
 const Appointments = () => {
     const [activeTab, setActiveTab] = useState("TODAY");
