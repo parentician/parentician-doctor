@@ -310,14 +310,7 @@ const Profile = () => {
                                         ))}
                                     </select>
                                 </div>
-                                <div className="w-px h-8 bg-neutral-200 hidden md:block" />
-                                <button
-                                    onClick={() => addLanguage()}
-                                    className="hidden md:flex items-center gap-2 px-6 py-3 bg-brand text-white font-bold rounded-xl shadow-lg shadow-brand/10 hover:bg-brand-dark hover:shadow-xl hover:-translate-y-0.5 transition-all active:scale-95"
-                                >
-                                    <Icon icon="solar:add-circle-bold" className="text-lg" />
-                                    <span>Add</span>
-                                </button>
+
                             </div>
 
                         </div>

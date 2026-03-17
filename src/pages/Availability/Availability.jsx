@@ -105,8 +105,9 @@ const Availability = () => {
 
     const generateTimeOptions = () => {
         const options = [];
+        const interval = Number(sessionDuration) || 15; // Fallback to 15
         for (let i = 0; i < 24; i++) {
-            for (let j = 0; j < 60; j += 15) {
+            for (let j = 0; j < 60; j += interval) {
                 const hour = i % 12 || 12;
                 const ampm = i < 12 ? "AM" : "PM";
                 const timeStr = `${hour}:${j.toString().padStart(2, '0')} ${ampm}`;
@@ -132,6 +133,24 @@ const Availability = () => {
         const ampm = h < 12 ? "AM" : "PM";
         h = h % 12 || 12;
         return `${h}:${m.toString().padStart(2, '0')} ${ampm}`;
+    };
+
+    const formatDayDate = (day) => {
+        const daysMap = { "SUNDAY": 0, "MONDAY": 1, "TUESDAY": 2, "WEDNESDAY": 3, "THURSDAY": 4, "FRIDAY": 5, "SATURDAY": 6 };
+        const now = new Date();
+        const currentDayIndex = now.getDay();
+        const targetDayIndex = daysMap[day];
+        let diff = targetDayIndex - currentDayIndex;
+        if (diff < 0) diff += 7;
+
+        const targetDate = new Date(now);
+        targetDate.setDate(now.getDate() + diff);
+
+        const dayNum = targetDate.getDate();
+        const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        const monthStr = months[targetDate.getMonth()];
+
+        return `${dayNum} ${monthStr}`;
     };
 
     const addSlotRange = (day) => {
@@ -352,7 +371,12 @@ Please select the appointments you will attend — others will be automatically 
                                     onClick={() => setSelectedDay(day)}
                                     className={`w-full text-left px-4 py-3 rounded-xl transition-all flex items-center justify-between group ${selectedDay === day ? 'bg-brand text-white' : 'hover:bg-brand-light hover:text-brand'}`}
                                 >
-                                    <span className="text-sm font-bold uppercase">{day}</span>
+                                    <div className="flex flex-col">
+                                        <span className="text-sm font-bold uppercase">{day}</span>
+                                        <span className={`text-[10px] font-medium ${selectedDay === day ? 'text-white/70' : 'text-neutral-400'}`}>
+                                            {formatDayDate(day)}
+                                        </span>
+                                    </div>
                                     <div className="flex flex-col items-end gap-1">
                                         <div className="flex items-center gap-2">
                                             {disabledDays.includes(day) && (
@@ -395,7 +419,12 @@ Please select the appointments you will attend — others will be automatically 
                             <div className="card-container p-8">
                                 <div className="flex items-center justify-between mb-8 pb-6 border-b border-neutral-100">
                                     <div>
-                                        <h3 className="text-xl font-bold text-neutral-800 uppercase tracking-tight">{selectedDay}</h3>
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <h3 className="text-xl font-bold text-neutral-800 uppercase tracking-tight">{selectedDay}</h3>
+                                            <span className="px-2 py-0.5 bg-neutral-100 text-neutral-500 text-[10px] font-bold rounded-lg uppercase tracking-wider">
+                                                {formatDayDate(selectedDay)}
+                                            </span>
+                                        </div>
                                         <p className="text-sm text-neutral-500">Configure your consultation time slots for this day</p>
                                     </div>
                                     <div className="flex items-center gap-3">

@@ -367,7 +367,7 @@ const Appointments = () => {
                             </div>
                             <div>
                                 <h4 className="text-xl font-bold text-neutral-800">{selectedAppt.fullName}</h4>
-                                <p className="text-sm text-neutral-500">#{selectedAppt.id} • Patient</p>
+                                <p className="text-sm text-neutral-500">• Patient</p>
                             </div>
                         </div>
 
@@ -388,9 +388,9 @@ const Appointments = () => {
                                 {selectedAppt.report && (
                                     <div className="space-y-1">
                                         <p className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">Medical Report</p>
-                                        <a 
-                                            href={`${IMG_URL}/get-images/${selectedAppt.report}`} 
-                                            target="_blank" 
+                                        <a
+                                            href={`${IMG_URL}/get-images/${selectedAppt.report}`}
+                                            target="_blank"
                                             rel="noopener noreferrer"
                                             className="text-sm font-bold text-[#E66F51] hover:underline flex items-center gap-1"
                                         >
