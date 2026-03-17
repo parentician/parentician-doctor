@@ -1,7 +1,7 @@
 import axios from "axios";
 
 // Apply base URL for axios using Vite env
-const API_URL = import.meta.env.VITE_APP_AUTHDOMAIN;
+const API_URL = import.meta.env.VITE_APP_AUTHDOMAIN || "http://localhost:5000";
 
 function getAccessToken() {
     const token = localStorage.getItem("doctorToken");
@@ -26,9 +26,14 @@ const axiosApi = axios.create({
 axiosApi.interceptors.response.use(
     (response) => response,
     (error) => {
-        if (error.response && error.response.status === 401) {
-            const msg = error.response.data?.message || "Session expired";
-            logoutAndRedirect(msg);
+        if (error.response) {
+            const status = error.response.status;
+            const message = error.response.data?.message;
+
+            if (status === 401 || (status === 404 && message === "Doctor not found")) {
+                const msg = message || "Session expired";
+                logoutAndRedirect(msg);
+            }
         }
         return Promise.reject(error);
     }

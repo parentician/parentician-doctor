@@ -181,8 +181,8 @@ const Patients = () => {
                                     <div className="w-20 h-20 rounded-full bg-brand-light flex items-center justify-center text-brand font-black text-2xl mx-auto mb-4">
                                         {selectedPatient.name.charAt(0)}
                                     </div>
-                                    <h3 className="text-xl font-bold text-neutral-800">{selectedPatient.name}</h3>
-                                    <p className="text-sm text-neutral-500">{selectedPatient.email}</p>
+                                    <h3 className="text-xl font-bold text-neutral-800 break-words">{selectedPatient.name}</h3>
+                                    <p className="text-sm text-neutral-500 break-words">{selectedPatient.email}</p>
                                 </div>
 
                                 <div className="py-6 space-y-6">
@@ -202,7 +202,7 @@ const Patients = () => {
                                                             item.status === 'CANCELLED' ? 'text-red-500' : 'text-orange-500'
                                                             }`}>{item.status}</span>
                                                     </div>
-                                                    <p className="text-sm font-bold text-neutral-800 group-hover:text-brand transition-colors">{item.concern || "No concern provided"}</p>
+                                                    <p className="text-sm font-bold text-neutral-800 group-hover:text-brand transition-colors break-words whitespace-pre-line">{item.concern || "No concern provided"}</p>
                                                     <div className="flex items-center justify-between mt-2">
                                                         <p className="text-xs text-neutral-500 flex items-center gap-1">
                                                             <Icon icon="solar:clock-circle-linear" /> {item.slot}
