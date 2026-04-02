@@ -60,6 +60,25 @@ const Appointments = () => {
         return new Date(year, month - 1, day);
     };
 
+    const isAppointmentPast = (dateStr, slotStr) => {
+        if (!dateStr || !slotStr) return false;
+        try {
+            const [day, month, year] = dateStr.split('/').map(Number);
+            const slotParts = slotStr.split('-');
+            const endTimeStr = slotParts[slotParts.length - 1].trim(); // e.g. "11:00 AM"
+
+            const [time, modifier] = endTimeStr.split(' ');
+            let [hours, minutes] = time.split(':').map(Number);
+            if (hours === 12) hours = 0;
+            if (modifier === 'PM') hours += 12;
+
+            const appointmentEndTime = new Date(year, month - 1, day, hours, minutes);
+            return new Date() >= appointmentEndTime;
+        } catch (e) {
+            return false;
+        }
+    };
+
     const filteredData = appointments.filter(appt => {
         const matchesSearch = appt.fullName?.toLowerCase().includes(searchQuery.toLowerCase());
 
@@ -263,13 +282,15 @@ const Appointments = () => {
                                                 >
                                                     <Icon icon="solar:pen-new-square-bold" />
                                                 </button>
-                                                <button
-                                                    onClick={() => handleFollowUpClick(appt)}
-                                                    className="p-2 hover:bg-white rounded-lg border border-transparent hover:border-neutral-200 transition-all text-neutral-400 hover:text-amber-500"
-                                                    title="Schedule Follow-up"
-                                                >
-                                                    <Icon icon="solar:calendar-add-bold" />
-                                                </button>
+                                                {(appt.status !== "PENDING" && appt.status !== "CANCELLED") && (
+                                                    <button
+                                                        onClick={() => handleFollowUpClick(appt)}
+                                                        className="p-2 hover:bg-white rounded-lg border border-transparent hover:border-neutral-200 transition-all text-neutral-400 hover:text-amber-500"
+                                                        title="Schedule Follow-up"
+                                                    >
+                                                        <Icon icon="solar:calendar-add-bold" />
+                                                    </button>
+                                                )}
                                             </div>
                                         </td>
                                     </tr>
@@ -440,7 +461,9 @@ const Appointments = () => {
                                         {selectedAppt.status === "CONFIRMED" && (
                                             <>
                                                 <option value="CONFIRMED">CONFIRMED</option>
-                                                <option value="COMPLETED">COMPLETED</option>
+                                                {isAppointmentPast(selectedAppt.date, selectedAppt.slot) && (
+                                                    <option value="COMPLETED">COMPLETED</option>
+                                                )}
                                                 <option value="CANCELLED">CANCELLED</option>
                                             </>
                                         )}

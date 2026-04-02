@@ -90,7 +90,7 @@ const Patients = () => {
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     {/* Patient List */}
                     <div className="lg:col-span-2 space-y-4">
-                        <div className="card-container overflow-hidden">
+                        <div className="card-container">
                             {loading ? (
                                 <div className="p-12 text-center">
                                     <div className="spinner-border text-brand" role="status">
@@ -98,53 +98,55 @@ const Patients = () => {
                                     </div>
                                 </div>
                             ) : (
-                                <table className="w-full text-left">
-                                    <thead>
-                                        <tr className="bg-neutral-50 text-neutral-500 text-xs font-bold uppercase">
-                                            <th className="px-6 py-4">Patient</th>
-                                            <th className="px-6 py-4">Total Sessions</th>
-                                            <th className="px-6 py-4">Last Consult</th>
-                                            <th className="px-6 py-4">Status</th>
-                                            <th className="px-6 py-4 text-right">Action</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-neutral-100">
-                                        {currentPatients.map((patient) => (
-                                            <tr
-                                                key={patient.id}
-                                                className={`hover:bg-neutral-50 transition-colors cursor-pointer ${selectedPatient?.id === patient.id ? 'bg-brand-light/20' : ''}`}
-                                                onClick={() => handlePatientClick(patient)}
-                                            >
-                                                <td className="px-6 py-4">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="w-10 h-10 rounded-full bg-neutral-100 flex items-center justify-center text-neutral-400 font-bold">
-                                                            {patient.name.charAt(0)}
-                                                        </div>
-                                                        <div>
-                                                            <p className="text-sm font-bold text-neutral-800">{patient.name}</p>
-                                                            <p className="text-[10px] text-neutral-500 uppercase font-black">{patient.email}</p>
-                                                        </div>
-                                                    </div>
-                                                </td>
-                                                <td className="px-6 py-4 font-bold text-neutral-600 text-sm">{patient.totalSessions}</td>
-                                                <td className="px-6 py-4 text-neutral-500 text-sm">{patient.lastConsult}</td>
-                                                <td className="px-6 py-4">
-                                                    <span className={`px-2 py-1 rounded-lg text-[10px] font-bold uppercase ${patient.status === 'ACTIVE' ? 'bg-green-100 text-green-600' : 'bg-neutral-100 text-neutral-600'}`}>
-                                                        {patient.status}
-                                                    </span>
-                                                </td>
-                                                <td className="px-6 py-4 text-right">
-                                                    <button className="text-brand text-xs font-bold hover:underline">View History</button>
-                                                </td>
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-left min-w-[600px]">
+                                        <thead>
+                                            <tr className="bg-neutral-50 text-neutral-500 text-xs font-bold uppercase">
+                                                <th className="px-6 py-4">Patient</th>
+                                                <th className="px-6 py-4">Total Sessions</th>
+                                                <th className="px-6 py-4">Last Consult</th>
+                                                <th className="px-6 py-4">Status</th>
+                                                <th className="px-6 py-4 text-right">Action</th>
                                             </tr>
-                                        ))}
-                                        {filteredPatients.length === 0 && (
-                                            <tr>
-                                                <td colSpan="5" className="px-6 py-12 text-center text-neutral-400 italic">No patients found</td>
-                                            </tr>
-                                        )}
-                                    </tbody>
-                                </table>
+                                        </thead>
+                                        <tbody className="divide-y divide-neutral-100">
+                                            {currentPatients.map((patient) => (
+                                                <tr
+                                                    key={patient.id}
+                                                    className={`hover:bg-neutral-50 transition-colors cursor-pointer ${selectedPatient?.id === patient.id ? 'bg-brand-light/20' : ''}`}
+                                                    onClick={() => handlePatientClick(patient)}
+                                                >
+                                                    <td className="px-6 py-4">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="w-10 h-10 rounded-full bg-neutral-100 flex items-center justify-center text-neutral-400 font-bold">
+                                                                {patient.name.charAt(0)}
+                                                            </div>
+                                                            <div>
+                                                                <p className="text-sm font-bold text-neutral-800">{patient.name}</p>
+                                                                <p className="text-[10px] text-neutral-500 uppercase font-black">{patient.email}</p>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-4 font-bold text-neutral-600 text-sm">{patient.totalSessions}</td>
+                                                    <td className="px-6 py-4 text-neutral-500 text-sm">{patient.lastConsult}</td>
+                                                    <td className="px-6 py-4">
+                                                        <span className={`px-2 py-1 rounded-lg text-[10px] font-bold uppercase ${patient.status === 'ACTIVE' ? 'bg-green-100 text-green-600' : 'bg-neutral-100 text-neutral-600'}`}>
+                                                            {patient.status}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-right">
+                                                        <button className="text-brand text-xs font-bold hover:underline">View History</button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                            {filteredPatients.length === 0 && (
+                                                <tr>
+                                                    <td colSpan="5" className="px-6 py-12 text-center text-neutral-400 italic">No patients found</td>
+                                                </tr>
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
                             )}
 
                             {filteredPatients.length > 0 && (
@@ -223,7 +225,7 @@ const Patients = () => {
                                 </div>
                             </div>
                         ) : (
-                            <div className="card-container p-12 text-center h-[500px] flex flex-col items-center justify-center opacity-50">
+                            <div className="card-container p-12 text-center h-full flex-col items-center justify-center opacity-50 hidden lg:flex min-h-[300px]">
                                 <Icon icon="solar:user-rounded-broken" className="text-6xl text-neutral-200 mb-4" />
                                 <h4 className="font-bold text-neutral-400 uppercase tracking-widest text-xs">Selection Required</h4>
                                 <p className="text-sm text-neutral-300 mt-2">Select a patient from the list <br /> to view their details</p>

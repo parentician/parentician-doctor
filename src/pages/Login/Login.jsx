@@ -12,6 +12,7 @@ const Login = () => {
     const [step, setStep] = useState("LOGIN"); // LOGIN or VERIFY_2FA
     const [doctorId, setDoctorId] = useState(null);
     const [loading, setLoading] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -124,13 +125,20 @@ const Login = () => {
                                     <Icon icon="solar:lock-password-bold" className="text-xl" />
                                 </span>
                                 <input
-                                    type="password"
-                                    className="w-full pl-10 pr-4 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all duration-200"
+                                    type={showPassword ? "text" : "password"}
+                                    className="w-full pl-10 pr-12 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all duration-200"
                                     placeholder="••••••••"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                     required
                                 />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-neutral-400 hover:text-neutral-600 transition-colors"
+                                >
+                                    <Icon icon={showPassword ? "solar:eye-bold" : "solar:eye-closed-bold"} className="text-xl" />
+                                </button>
                             </div>
                         </div>
 

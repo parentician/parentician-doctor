@@ -210,14 +210,31 @@ const Availability = () => {
             current = next;
         }
 
+        const existingSlots = schedule[day] || [];
+        const uniqueNewSlots = slots.filter(newSlot =>
+            !existingSlots.some(existing =>
+                existing.start === newSlot.start && existing.end === newSlot.end
+            )
+        );
+
+        if (uniqueNewSlots.length === 0) {
+            return toast.error("All slots in this range are already present");
+        }
+
         const updatedSchedule = {
             ...schedule,
-            [day]: [...schedule[day], ...slots]
+            [day]: [...existingSlots, ...uniqueNewSlots]
         };
+
         setSchedule(updatedSchedule);
         updateAvailabilityOnBackend(updatedSchedule);
 
-        toast.success(`${slots.length} slots added`);
+        const skippedCount = slots.length - uniqueNewSlots.length;
+        if (skippedCount > 0) {
+            toast.success(`${uniqueNewSlots.length} slots added (${skippedCount} duplicates skipped)`);
+        } else {
+            toast.success(`${uniqueNewSlots.length} slots added`);
+        }
         setNewSlotTimes({ start: "", end: "" });
     };
 
@@ -334,7 +351,8 @@ Please select the appointments you will attend — others will be automatically 
             }
         } catch (error) {
             console.error("Error confirming action:", error);
-            toast.error("An error occurred");
+            const errorMessage = error.response?.data?.message || "An error occurred while confirming action";
+            toast.error(errorMessage);
         } finally {
             setConfirmLoading(false);
         }
@@ -624,7 +642,8 @@ Please select the appointments you will attend — others will be automatically 
                                                     e.target.reset();
                                                 }
                                             } catch (error) {
-                                                toast.error(error?.message || "Error blocking date");
+                                                const errorMessage = error.response?.data?.message || error?.message || "Error blocking date";
+                                                toast.error(errorMessage);
                                             }
                                         }
                                     }
@@ -640,7 +659,7 @@ Please select the appointments you will attend — others will be automatically 
                                 </div>
                                 <div className="flex-[2] w-full">
                                     <label className="block text-[10px] font-black text-neutral-400 uppercase tracking-widest mb-1.5">REASON (OPTIONAL)</label>
-                                    <input type="text" name="reason" className="input-field h-[46px]" placeholder="e.g. Annual Vacation, Conference" />
+                                    <input type="text" name="reason" className="input-field h-[46px]" placeholder="e.g. Annual Vacation, Conference" maxLength={100} />
                                 </div>
                                 <button type="submit" className="h-[46px] px-8 bg-brand text-white font-bold rounded-xl hover:bg-brand-dark transition-all shadow-lg shadow-brand/20 active:scale-95 whitespace-nowrap">
                                     Block Range
@@ -652,16 +671,16 @@ Please select the appointments you will attend — others will be automatically 
                                 {blockedDates.length > 0 ? (
                                     <div className="divide-y divide-neutral-100 border border-neutral-100 rounded-xl overflow-hidden">
                                         {blockedDates.map(item => (
-                                            <div key={item.id} className="flex items-center justify-between p-4 hover:bg-neutral-50 transition-colors">
-                                                <div className="flex items-center gap-4">
-                                                    <div className="p-2 bg-red-50 text-red-500 rounded-lg">
+                                            <div key={item.id} className="flex items-center justify-between p-4 hover:bg-neutral-50 transition-colors gap-4">
+                                                <div className="flex items-center gap-4 flex-1 min-w-0">
+                                                    <div className="p-2 bg-red-50 text-red-500 rounded-lg shrink-0">
                                                         <Icon icon="solar:calendar-mark-bold" />
                                                     </div>
-                                                    <div>
-                                                        <p className="text-sm font-bold text-neutral-800">
+                                                    <div className="min-w-0 flex-1">
+                                                        <p className="text-sm font-bold text-neutral-800 truncate">
                                                             {item.startDate === item.endDate ? item.startDate : `${item.startDate} to ${item.endDate}`}
                                                         </p>
-                                                        <p className="text-xs text-neutral-500">{item.reason || "No reason provided"}</p>
+                                                        <p className="text-xs text-neutral-500 break-words line-clamp-2 hover:line-clamp-none transition-all">{item.reason || "No reason provided"}</p>
                                                     </div>
                                                 </div>
                                                 <button
@@ -673,12 +692,13 @@ Please select the appointments you will attend — others will be automatically 
                                                                 toast.success("Blocked date removed");
                                                             }
                                                         } catch (error) {
-                                                            toast.error("Error removing blocked date");
+                                                            const errorMessage = error.response?.data?.message || "Error removing blocked date";
+                                                            toast.error(errorMessage);
                                                         }
                                                     }}
-                                                    className="p-2 text-neutral-400 hover:text-red-500 transition-colors"
+                                                    className="p-2 text-neutral-400 hover:text-red-500 transition-colors shrink-0"
                                                 >
-                                                    <Icon icon="solar:close-circle-bold" />
+                                                    <Icon icon="solar:close-circle-bold" className="text-xl" />
                                                 </button>
                                             </div>
                                         ))}
