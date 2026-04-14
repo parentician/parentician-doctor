@@ -33,7 +33,7 @@ const Header = ({ isSidebarOpen, setIsSidebarOpen }) => {
                         <p className="text-xs text-neutral-500 leading-tight">Consultation Doctor</p>
                     </div>
                     <img
-                        src="doctor_img.jpg"
+                        src={doctorData.image ? `${import.meta.env.VITE_APP_AUTHDOMAIN}/api/get-images/${doctorData.image}` : "/default-doctor.png"}
                         alt="Profile"
                         className="w-10 h-10 rounded-full border border-neutral-200 object-cover"
                     />

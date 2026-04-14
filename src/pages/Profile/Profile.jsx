@@ -56,6 +56,7 @@ const Profile = () => {
                 }
 
                 setDoctorData(data);
+                localStorage.setItem("doctorData", JSON.stringify(data));
                 setEditableBio(data.doctor_bio || "");
                 setImagePreview(data.image ? `${IMAGE_BASE_URL}${data.image}` : null);
             }
@@ -91,6 +92,7 @@ const Profile = () => {
 
             if (res.status) {
                 setDoctorData(res.data);
+                localStorage.setItem("doctorData", JSON.stringify(res.data));
                 setSelectedImage(null);
                 toast.success("Profile updated successfully!");
             }
@@ -303,11 +305,19 @@ const Profile = () => {
                                         className="w-full bg-transparent border-none focus:ring-0 text-neutral-700 font-medium cursor-pointer py-3 px-4"
                                     >
                                         <option value="">Select a language...</option>
-                                        {indianLanguages.map((lang) => (
-                                            <option key={lang} value={lang}>
-                                                {lang}
-                                            </option>
-                                        ))}
+                                        {indianLanguages.map((lang) => {
+                                            const isAlreadySelected = doctorData.language?.includes(lang);
+                                            return (
+                                                <option
+                                                    key={lang}
+                                                    value={lang}
+                                                    disabled={isAlreadySelected}
+                                                    style={{ color: isAlreadySelected ? '#9CA3AF' : 'inherit' }}
+                                                >
+                                                    {lang}{isAlreadySelected ? ' ✓' : ''}
+                                                </option>
+                                            );
+                                        })}
                                     </select>
                                 </div>
 

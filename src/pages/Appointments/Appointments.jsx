@@ -152,7 +152,8 @@ const Appointments = () => {
                 toast.error(response.message || "Failed to update appointment");
             }
         } catch (error) {
-            toast.error("Error updating appointment");
+            const errorMsg = error.response?.data?.message || "Error updating appointment";
+            toast.error(errorMsg);
             console.error(error);
         }
     };
@@ -166,6 +167,14 @@ const Appointments = () => {
     const handleFollowUpSubmit = async () => {
         if (!followUpData.date || !followUpData.reason) {
             return toast.error("Please fill in all fields");
+        }
+
+        const selectedDate = new Date(followUpData.date);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        if (selectedDate < today) {
+            return toast.error("Follow-up date cannot be in the past");
         }
 
         try {
@@ -182,7 +191,8 @@ const Appointments = () => {
                 toast.error(response.message || "Failed to schedule follow-up");
             }
         } catch (error) {
-            toast.error("Error scheduling follow-up");
+            const errorMsg = error.response?.data?.message || "Error scheduling follow-up";
+            toast.error(errorMsg);
             console.error(error);
         }
     };
@@ -568,7 +578,7 @@ const Appointments = () => {
                                         className="input-field py-3"
                                         value={followUpData.date}
                                         onChange={(e) => setFollowUpData({ ...followUpData, date: e.target.value })}
-                                        min={new Date().toISOString().split('T')[0]}
+                                        min={new Date(Date.now() + 12 * 60 * 60 * 1000).toISOString().split('T')[0]}
                                     />
                                 </div>
                                 <div>
